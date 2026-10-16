@@ -34,6 +34,31 @@ export default function TopicDetailPage({ params }: TopicDetailPageProps) {
 
     const loadTopic = async () => {
       setLoading(true);
+
+      if (decodedSlug === "dang-chieu-phat" || decodedSlug === "dang-chieu" || decodedSlug === "phim-dang-chieu") {
+        try {
+          const { fetchFilteredMovies } = await import("@/lib/api");
+          const dangChieuMovies = await fetchFilteredMovies({ type: "dang_chieu", page: 1 });
+          if (isMounted && dangChieuMovies && dangChieuMovies.length > 0) {
+            setTopic({
+              title: "Đang Chiếu Phát",
+              slug: decodedSlug,
+              url: `/chu-de/${decodedSlug}`,
+              movieCount: dangChieuMovies.length,
+              movies: dangChieuMovies,
+              samplePosters: dangChieuMovies.slice(0, 3).map((m) => m.posterUrl),
+              description: "Tuyển tập những bộ phim đang phát sóng mới nhất, cập nhật liên tục các tập mới mỗi ngày.",
+              tag: "Đang chiếu",
+            });
+            setMovies(dangChieuMovies);
+            setHasMore(dangChieuMovies.length >= 24);
+            setPage(1);
+            setLoading(false);
+            return;
+          }
+        } catch (e) {}
+      }
+
       const staticTopicData = getTopicBySlug(rawSlug) || getTopicBySlug(decodedSlug);
 
       try {

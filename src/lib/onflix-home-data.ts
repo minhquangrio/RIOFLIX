@@ -123,118 +123,246 @@ export const ONFLIX_HOME_SECTIONS: OnflixSection[] = [
   },
   {
     "title": "Đang Chiếu Phát",
-    "viewAllUrl": "/chu-de/dang-chieu-phat",
+    "viewAllUrl": "/kham-pha?type=dang_chieu",
     "movies": [
-      {
-        "id": "cay-sinh-menh",
-        "title": "Cây Sinh Mệnh",
-        "originalTitle": "Born to Be Alive",
-        "posterUrl": "https://p3-sg.tiktokcdn.com/obj/tiktok-obj/4c5abb79889782eaf61473cea401dcf5",
-        "quality": "HD",
-        "episodes": "",
-        "linkUrl": "/phim/cay-sinh-menh"
-      },
-      {
-        "id": "vu-lam-linh",
-        "title": "Vũ Lâm Linh",
-        "originalTitle": "Zhan Zhao Adventures",
-        "posterUrl": "https://pics.onflixcdn.com/image/wh_80/thumbnail/2f70567870120c34d273ee66a8cce911.webp",
-        "quality": "HD",
-        "episodes": "",
-        "linkUrl": "/phim/vu-lam-linh"
-      },
-      {
-        "id": "cuoi-roi-moi-dong-long",
-        "title": "Cưới Rồi Mới Động\r\n                                                                    Lòng",
-        "originalTitle": "Late to Love",
-        "posterUrl": "https://img.ophim.live/uploads/movies/cuoi-roi-moi-dong-long-thumb.jpg",
-        "quality": "HD",
-        "episodes": "",
-        "linkUrl": "/phim/cuoi-roi-moi-dong-long"
-      },
-      {
-        "id": "kill-it-slay-toi-ben",
-        "title": "Kill It: Slay Tới Bến",
-        "originalTitle": "Kill It: Style Creator War",
-        "posterUrl": "https://img.ophim.live/uploads/movies/kill-it-slay-toi-ben-thumb.jpg",
-        "quality": "HD",
-        "episodes": "",
-        "linkUrl": "/phim/kill-it-slay-toi-ben"
-      },
-      {
-        "id": "nhu-thuo-ban-dau",
-        "title": "Như Thuở Ban Đầu",
-        "originalTitle": "Reloved",
-        "posterUrl": "https://p3-sg.tiktokcdn.com/obj/tiktok-obj/7410c058c1257cee551c0f5dd97c53fc",
-        "quality": "HD",
-        "episodes": "",
-        "linkUrl": "/phim/nhu-thuo-ban-dau"
-      },
-      {
-        "id": "dai-duong-me-vu",
-        "title": "Đại Đường Mê Vụ",
-        "originalTitle": "The Tang Mist",
-        "posterUrl": "https://img.ophim.live/uploads/movies/dai-duong-me-vu-thumb.jpg",
-        "quality": "HD",
-        "episodes": "",
-        "linkUrl": "/phim/dai-duong-me-vu"
-      },
-      {
-        "id": "huong-ve-sao-bang-cau-nguyen",
-        "title": "Hướng Về Sao\r\n                                                                    Băng Cầu Nguyện",
-        "originalTitle": "Wishing Upon the Shooting Stars",
-        "posterUrl": "https://pics.onflixcdn.com/image/wh_80/thumbnail/526aadde1841048ffa149f712614f211.webp",
-        "quality": "HD",
-        "episodes": "",
-        "linkUrl": "/phim/huong-ve-sao-bang-cau-nguyen"
-      },
-      {
-        "id": "anh-sang-dem-toi",
-        "title": "Hắc Dạ Cáo Bạch",
-        "originalTitle": "Light to the Night",
-        "posterUrl": "https://phimimg.com/upload/vod/20260427-1/c97610bf8a67fbc5e02c45834b5a6f3d.jpg",
-        "quality": "HD",
-        "episodes": "",
-        "linkUrl": "/phim/anh-sang-dem-toi"
-      },
-      {
-        "id": "ho-so-toi-pham-phan-2",
-        "title": "Hồ Sơ Tội Phạm (Phần\r\n                                                                    2)",
-        "originalTitle": "Criminal Record (Season 2)",
-        "posterUrl": "https://img.ophim.live/uploads/movies/ho-so-toi-pham-phan-2-thumb.jpg",
-        "quality": "HD",
-        "episodes": "",
-        "linkUrl": "/phim/ho-so-toi-pham-phan-2"
-      },
-      {
-        "id": "cuc-han",
-        "title": "Cực Hạn",
-        "originalTitle": "Climax",
-        "posterUrl": "https://image.tmdb.org/t/p/w500/vH5Eb3KtoXnVb6jQ0nbpiEF0BFb.jpg",
-        "quality": "HD",
-        "episodes": "",
-        "linkUrl": "/phim/cuc-han"
-      },
-      {
-        "id": "griya-rahsia-seorang-lelaki",
-        "title": "Griya",
-        "originalTitle": "Griya",
-        "posterUrl": "https://phimimg.com/upload/vod/20260512-1/7ec94863afee4e2d66e04a986c22234f.jpg",
-        "quality": "HD",
-        "episodes": "",
-        "linkUrl": "/phim/griya-rahsia-seorang-lelaki"
-      },
-      {
-        "id": "tron-tim-tinh-yeu",
-        "title": "Trốn Tìm Tình Yêu",
-        "originalTitle": "Chasing Love",
-        "posterUrl": "https://phim.nguonc.com/public/images/Post/6/tron-tim-tinh-yeu.jpg",
-        "quality": "HD",
-        "episodes": "",
-        "linkUrl": "/phim/tron-tim-tinh-yeu"
-      }
+        {
+            "id": "bac-si-x-mafia-ao-trang",
+            "title": "Bác Sĩ X : Mafia Áo Trắng",
+            "originalTitle": "Doctor X: Mafia in White",
+            "posterUrl": "https://pics.onflixcdn.com/vi/image/poster/860ad16d584c0a3df4f0f867228cf111.webp",
+            "quality": "HD",
+            "episodes": "Tập 3",
+            "linkUrl": "/phim/bac-si-x-mafia-ao-trang",
+            "imdbScore": "9.0"
+        },
+        {
+            "id": "my-nhan-du",
+            "title": "Mỹ Nhân Dư",
+            "originalTitle": "The Vanishing Beauty",
+            "posterUrl": "https://pics.onflixcdn.com/vi/image/poster/7cc3da3704610d85f9404f33d5b0ec11.webp",
+            "quality": "HD",
+            "episodes": "Tập 17",
+            "linkUrl": "/phim/my-nhan-du",
+            "imdbScore": "8.0"
+        },
+        {
+            "id": "mua-2-nguoi-chay-xuyen-khong-gian",
+            "title": "[Mùa 2] Người Chạy Xuyên Không Gian",
+            "originalTitle": "Dark Matter Season 2",
+            "posterUrl": "https://pics.onflixcdn.com/vi/image/poster/4fee8b6bc15f0e71e88e5fe6acd84d11.webp",
+            "quality": "HD",
+            "episodes": "Tập 7",
+            "linkUrl": "/phim/mua-2-nguoi-chay-xuyen-khong-gian",
+            "imdbScore": "7.8"
+        },
+        {
+            "id": "moi-tinh-dau-thu-hai",
+            "title": "Mối Tình Đầu Thứ Hai",
+            "originalTitle": "First Love Again",
+            "posterUrl": "https://pics.onflixcdn.com/vi/image/poster/700e67c9a36d0c93e077a521c98f8e11.webp",
+            "quality": "HD",
+            "episodes": "Tập 10",
+            "linkUrl": "/phim/moi-tinh-dau-thu-hai"
+        },
+        {
+            "id": "fool-in-love-yeu-mot-ke-ngoc",
+            "title": "Fool in Love: Yêu Một Kẻ Ngốc",
+            "originalTitle": "Fool in Love",
+            "posterUrl": "https://pics.onflixcdn.com/vi/image/poster/d8c10e9515300ce8fdd9c796543d6411.webp",
+            "quality": "HD",
+            "episodes": "Tập 3",
+            "linkUrl": "/phim/fool-in-love-yeu-mot-ke-ngoc"
+        },
+        {
+            "id": "khien-em-rung-dong",
+            "title": "Khiến Em Rung Động",
+            "originalTitle": "Make Me Tingle",
+            "posterUrl": "https://pics.onflixcdn.com/vi/image/poster/10f02a42993f0022f07d8d23793ad711.webp",
+            "quality": "HD",
+            "episodes": "Tập 4",
+            "linkUrl": "/phim/khien-em-rung-dong"
+        },
+        {
+            "id": "chiec-ca-vat-roi-ram",
+            "title": "Chiếc Cà Vạt Rối Rắm",
+            "originalTitle": "Twisted Tie",
+            "posterUrl": "https://pics.onflixcdn.com/vi/image/poster/385a3ec0002c0dcef329e634d69ae311.webp",
+            "quality": "HD",
+            "episodes": "Tập 2",
+            "linkUrl": "/phim/chiec-ca-vat-roi-ram",
+            "imdbScore": "7.0"
+        },
+        {
+            "id": "mua-6-nhung-diep-vien-het-thoi-slow-horses",
+            "title": "[Mùa 6] Những Điệp Viên Hết Thời - Slow Horses",
+            "originalTitle": "Slow Horses Season 6",
+            "posterUrl": "https://pics.onflixcdn.com/vi/image/poster/01c4e78e8ad7096cd51beacebbe36911.webp",
+            "quality": "HD",
+            "episodes": "Tập 5",
+            "linkUrl": "/phim/mua-6-nhung-diep-vien-het-thoi-slow-horses",
+            "imdbScore": "8.1"
+        },
+        {
+            "id": "visionquest",
+            "title": "VisionQuest",
+            "originalTitle": "VisionQuest",
+            "posterUrl": "https://pics.onflixcdn.com/vi/image/poster/a8a51975efc20f1ad1e38fdc8d8d9e11.webp",
+            "quality": "HD",
+            "episodes": "Tập 2",
+            "linkUrl": "/phim/visionquest",
+            "imdbScore": "9.1"
+        },
+        {
+            "id": "tien-si-tinh-yeu",
+            "title": "Tiến Sĩ Tình Yêu",
+            "originalTitle": "Between Steps",
+            "posterUrl": "https://pics.onflixcdn.com/vi/image/poster/f665879ca0170974c83668f5ed99b411.webp",
+            "quality": "HD",
+            "episodes": "Tập 4",
+            "linkUrl": "/phim/tien-si-tinh-yeu",
+            "imdbScore": "7.2"
+        },
+        {
+            "id": "khom-khlang",
+            "title": "Khom Khlang",
+            "originalTitle": "Khom Khlang",
+            "posterUrl": "https://pics.onflixcdn.com/vi/image/poster/f53397c82d0106ade2b7da517d12b011.webp",
+            "quality": "HD",
+            "episodes": "Tập 6",
+            "linkUrl": "/phim/khom-khlang",
+            "imdbScore": "9.0"
+        },
+        {
+            "id": "carrie-2026",
+            "title": "Carrie",
+            "originalTitle": "Carrie",
+            "posterUrl": "https://pics.onflixcdn.com/vi/image/poster/7bbdead3e4330e80e067d32eefe97e11.webp",
+            "quality": "HD",
+            "episodes": "Tập 0",
+            "linkUrl": "/phim/carrie-2026",
+            "imdbScore": "8.3"
+        },
+        {
+            "id": "vua-hai-kich-2026",
+            "title": "Vua Hài Kịch",
+            "originalTitle": "King of Comedy",
+            "posterUrl": "https://pics.onflixcdn.com/vi/image/poster/fb5c4b3abc0c0a5ac0b2fac1f255f311.webp",
+            "quality": "HD",
+            "episodes": "Tập 0",
+            "linkUrl": "/phim/vua-hai-kich-2026"
+        },
+        {
+            "id": "chuyen-xua-du-hong",
+            "title": "Chuyện Xưa Dư Hồng",
+            "originalTitle": "The Old Story of Yu Hong",
+            "posterUrl": "https://pics.onflixcdn.com/vi/image/poster/81b7e53db58b0c7fede314f9608bb511.webp",
+            "quality": "HD",
+            "episodes": "Tập 24",
+            "linkUrl": "/phim/chuyen-xua-du-hong",
+            "imdbScore": "7.2"
+        },
+        {
+            "id": "the-fire-4-elements-xich-tinh-ruc-lua",
+            "title": "The Fire 4 Elements: Xích Tình Rực Lửa",
+            "originalTitle": "The Fire 4 Elements",
+            "posterUrl": "https://pics.onflixcdn.com/vi/image/poster/edd386ddd35f0439f2a5a18316c27011.webp",
+            "quality": "HD",
+            "episodes": "Tập 7",
+            "linkUrl": "/phim/the-fire-4-elements-xich-tinh-ruc-lua",
+            "imdbScore": "8.9"
+        },
+        {
+            "id": "ban-4k-su-huynh-qua-can-trong",
+            "title": "[Bản 4K] Sư Huynh Quá Cẩn Trọng",
+            "originalTitle": "Pull Strings",
+            "posterUrl": "https://pics.onflixcdn.com/vi/image/poster/660e9b8d6c99066ec3b2f868273da111.webp",
+            "quality": "HD",
+            "episodes": "Tập 7",
+            "linkUrl": "/phim/ban-4k-su-huynh-qua-can-trong",
+            "imdbScore": "6.2"
+        },
+        {
+            "id": "ban-4k-hoa-khai-cam-tu",
+            "title": "[Bản 4K] Hoa Khai Cẩm Tú",
+            "originalTitle": "The Road to Splendor",
+            "posterUrl": "https://pics.onflixcdn.com/vi/image/poster/543c94d44847003efb904c4efb1e9c11.webp",
+            "quality": "HD",
+            "episodes": "Tập 19",
+            "linkUrl": "/phim/ban-4k-hoa-khai-cam-tu",
+            "imdbScore": "7.4"
+        },
+        {
+            "id": "knot-nut-that",
+            "title": "KNOT: Nút Thắt",
+            "originalTitle": " KNOT",
+            "posterUrl": "https://pics.onflixcdn.com/vi/image/poster/8654ee617599000bec27e91ae2586a11.webp",
+            "quality": "HD",
+            "episodes": "Tập 8",
+            "linkUrl": "/phim/knot-nut-that",
+            "imdbScore": "6.7"
+        },
+        {
+            "id": "ai-girl-ban-gai-nguoi-may",
+            "title": "AI Girl: Bạn Gái Người Máy",
+            "originalTitle": "AI Girl",
+            "posterUrl": "https://pics.onflixcdn.com/vi/image/poster/e1d6933afc830a56ecd6708139ef6411.webp",
+            "quality": "HD",
+            "episodes": "Tập 7",
+            "linkUrl": "/phim/ai-girl-ban-gai-nguoi-may",
+            "imdbScore": "7.7"
+        },
+        {
+            "id": "van-nhan-chi-thuong",
+            "title": "Vạn Nhân Chi Thượng",
+            "originalTitle": "Above Myriads",
+            "posterUrl": "https://pics.onflixcdn.com/vi/image/poster/e5cda7b6f8ce0c59e06f2753b3760211.webp",
+            "quality": "HD",
+            "episodes": "Tập 9",
+            "linkUrl": "/phim/van-nhan-chi-thuong",
+            "imdbScore": "7.0"
+        },
+        {
+            "id": "ban-4k-ai-girl-ban-gai-nguoi-may",
+            "title": "[Bản 4K] AI Girl: Bạn Gái Người Máy",
+            "originalTitle": "AI Girl",
+            "posterUrl": "https://pics.onflixcdn.com/vi/image/poster/0f71ebaba0ef0216f8d32e58a69a6111.webp",
+            "quality": "HD",
+            "episodes": "Tập 4",
+            "linkUrl": "/phim/ban-4k-ai-girl-ban-gai-nguoi-may",
+            "imdbScore": "7.7"
+        },
+        {
+            "id": "vung-dat-mua-xuan",
+            "title": " Vùng Đất Mùa Xuân",
+            "originalTitle": " The Forbidden Land",
+            "posterUrl": "https://pics.onflixcdn.com/vi/image/poster/21e3a2d9df7a0a0dc8e4e3909e890411.webp",
+            "quality": "HD",
+            "episodes": "Tập 12",
+            "linkUrl": "/phim/vung-dat-mua-xuan",
+            "imdbScore": "8.0"
+        },
+        {
+            "id": "truy-duoi-nguoc-thoi-gian",
+            "title": "Truy Đuổi Ngược Thời Gian",
+            "originalTitle": "Reverse Chase",
+            "posterUrl": "https://pics.onflixcdn.com/vi/image/poster/96339112652a02a3d03c1d789cbd0311.webp",
+            "quality": "HD",
+            "episodes": "Tập 18",
+            "linkUrl": "/phim/truy-duoi-nguoc-thoi-gian",
+            "imdbScore": "7.0"
+        },
+        {
+            "id": "trach-thien-ky",
+            "title": "Trạch Thiên Ký",
+            "originalTitle": "Fighter of the Destiny",
+            "posterUrl": "https://pics.onflixcdn.com/vi/image/poster/3dc5b8af88360f80d8e1afb42dca9611.webp",
+            "quality": "HD",
+            "episodes": "Tập 25",
+            "linkUrl": "/phim/trach-thien-ky",
+            "imdbScore": "8.0"
+        }
     ]
-  },
+},
   {
     "title": "Phim Kỹ Xảo Mãn Nhãn",
     "viewAllUrl": "/chu-de/phim-ky-xao-man-nhan",

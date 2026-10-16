@@ -42,6 +42,90 @@ function formatPoster(data: any, item: any): string {
 }
 
 
+async function fetchFromOnflixApi(params: {
+  category?: string;
+  country?: string;
+  year?: string;
+  type?: string;
+  sort?: string;
+  lang?: string;
+  page?: string;
+}) {
+  try {
+    const query = new URLSearchParams();
+    if (params.category && params.category !== "all") query.set("category", params.category);
+    if (params.country && params.country !== "all") query.set("country", params.country);
+    if (params.year && params.year !== "all" && params.year !== "Toàn bộ thập niên" && !isNaN(Number(params.year))) {
+      query.set("year", params.year);
+    }
+    if (params.type && params.type !== "all") {
+      let t = params.type;
+      if (t === "phim-dang-chieu" || t === "dang_chieu") t = "dang_chieu";
+      else if (t === "phim-chieu-rap" || t === "chieu_rap") t = "chieu_rap";
+      else if (t === "tv-shows" || t === "tv_show" || t === "tvshows") t = "tv_show";
+      else if (t === "single" || t === "phim-le") t = "phim-le";
+      else if (t === "series" || t === "phim-bo") t = "phim-bo";
+      query.set("type", t);
+    }
+    if (params.sort) {
+      if (params.sort === "latest" || params.sort === "Mới nhất") query.set("sort", "newest");
+      else if (params.sort === "tmdb" || params.sort === "Điểm TMDB") query.set("sort", "tmdb_score");
+      else if (params.sort === "year_desc" || params.sort === "Năm (Mới-Cũ)") query.set("sort", "year_desc");
+      else if (params.sort === "year_asc" || params.sort === "Năm (Cũ-Mới)") query.set("sort", "year_asc");
+      else query.set("sort", params.sort);
+    }
+    if (params.lang && params.lang !== "all") query.set("lang", params.lang);
+    query.set("page", params.page || "1");
+    query.set("limit", "24");
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+
+    const res = await fetch(`https://k8s.onflixcdn.com/api/movies?${query.toString()}`, {
+      signal: controller.signal,
+      next: { revalidate: 180 },
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Referer": "https://onflix.lat/",
+      },
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!res.ok) return null;
+    const data = await res.json();
+    const rawList = data.data || [];
+    if (!Array.isArray(rawList) || rawList.length === 0) return null;
+
+    const items = rawList.map((item: any) => ({
+      id: item.id || item.slug,
+      title: item.title,
+      originalTitle: item.original_title,
+      posterUrl: item.poster_url || item.thumb_url || "https://image.tmdb.org/t/p/original/w7Q53AmbEvrbpR2nRE8qBHJcbi2.jpg",
+      year: item.year || 2026,
+      episodes: item.episode_current || "FULL",
+      quality: item.quality || (item.is_4k ? "4K" : "HD"),
+      linkUrl: `/phim/${item.slug}`,
+      isTop10: false,
+      imdbScore: item.tmdb_vote_average ? item.tmdb_vote_average.toFixed(1) : undefined,
+      rating: item.tmdb_vote_average ? item.tmdb_vote_average.toFixed(1) : undefined,
+      vietsub: item.vietsub,
+      thuyet_minh: item.thuyet_minh,
+      long_tieng: item.long_tieng,
+      is_sn: item.is_sn,
+    }));
+
+    const pagination = data.pagination || {};
+    return {
+      items,
+      totalItems: Number(pagination.total_items || items.length),
+      totalPages: Number(pagination.total_pages || 1),
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const action = searchParams.get("action") || "latest";
@@ -73,13 +157,38 @@ export async function GET(request: Request) {
     Boolean(typeParam || categoryParam || countryParam || yearParam || sortParam || langParam);
 
   if (isFilterMode) {
+    // 1. Prioritize Onflix primary API (100% exact match to onflix.lat)
+    const onflixData = await fetchFromOnflixApi({
+      category: categoryParam,
+      country: countryParam,
+      year: yearParam,
+      type: typeParam || (action === "type" ? rawSlug : ""),
+      sort: sortParam,
+      lang: langParam,
+      page,
+    });
+
+    if (onflixData && onflixData.items.length > 0) {
+      return NextResponse.json({
+        success: true,
+        items: onflixData.items,
+        page: Number(page),
+        hasMore: onflixData.items.length >= 24,
+        totalItems: onflixData.totalItems,
+        totalPages: onflixData.totalPages,
+        perPage: 24,
+      });
+    }
+
+    // 2. Fallback to PhimAPI if Onflix returns empty or fails
     let typeSlug = "phim-bo";
     const t = typeParam || (action === "type" ? rawSlug : "");
     if (t === "single" || t === "phim-le") typeSlug = "phim-le";
     else if (t === "series" || t === "phim-bo") typeSlug = "phim-bo";
     else if (t === "chieu_rap" || t === "phim-chieu-rap") typeSlug = "phim-chieu-rap";
-    else if (t === "hoat-hinh" || t === "phim-dang-chieu" || t === "dang_chieu") typeSlug = "hoat-hinh";
-    else if (t === "tvshows" || t === "tv-shows") typeSlug = "tv-shows";
+    else if (t === "hoat-hinh") typeSlug = "hoat-hinh";
+    else if (t === "dang_chieu" || t === "phim-dang-chieu") typeSlug = "phim-bo";
+    else if (t === "tvshows" || t === "tv-shows" || t === "tv_show") typeSlug = "tv-shows";
     else if (t && t !== "all" && t !== "phim-moi-cap-nhat") typeSlug = cleanSlug(t);
 
     targetUrl = `https://phimapi.com/v1/api/danh-sach/${typeSlug}?page=${page}`;
@@ -109,9 +218,23 @@ export async function GET(request: Request) {
       targetUrl += `&sort_lang=${encodeURIComponent(langParam)}`;
     }
   } else if (action === "country") {
+    // Check onflix API first for country queries too
+    const onflixCountry = await fetchFromOnflixApi({ country: cleanSlug(rawSlug), page });
+    if (onflixCountry && onflixCountry.items.length > 0) {
+      return NextResponse.json({
+        success: true,
+        items: onflixCountry.items,
+        page: Number(page),
+        hasMore: onflixCountry.items.length >= 24,
+        totalItems: onflixCountry.totalItems,
+        totalPages: onflixCountry.totalPages,
+        perPage: 24,
+      });
+    }
     targetUrl = `https://phimapi.com/v1/api/quoc-gia/${cleanSlug(rawSlug)}?page=${page}`;
   } else if (action === "category") {
     const catSlug = mapCategorySlug(rawSlug);
+    targetUrl = `https://phimapi.com/v1/api/the-loai/${encodeURIComponent(catSlug)}?page=${page}`;
     targetUrl = `https://phimapi.com/v1/api/the-loai/${encodeURIComponent(catSlug)}?page=${page}`;
   } else if (action === "year") {
     targetUrl = `https://phimapi.com/v1/api/nam/${cleanSlug(rawSlug)}?page=${page}`;

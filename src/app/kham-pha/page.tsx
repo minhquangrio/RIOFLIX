@@ -15,9 +15,10 @@ const TOP_TABS = [
   { id: "all", label: "Tất cả", slug: "all" },
   { id: "phim-le", label: "Phim Lẻ", slug: "phim-le" },
   { id: "phim-bo", label: "Phim Bộ", slug: "phim-bo" },
-  { id: "phim-chieu-rap", label: "Phim Chiếu Rạp", slug: "phim-chieu-rap" },
+  { id: "chieu_rap", label: "Phim Chiếu Rạp", slug: "chieu_rap" },
+  { id: "dang_chieu", label: "Phim đang chiếu", slug: "dang_chieu" },
+  { id: "tv_show", label: "TV Shows", slug: "tv_show" },
   { id: "hoat-hinh", label: "Phim Hoạt Hình", slug: "hoat-hinh" },
-  { id: "tv-shows", label: "TV Shows", slug: "tv-shows" },
 ];
 
 const CATEGORIES = [
@@ -225,19 +226,28 @@ function KhamPhaContent() {
         {/* Header Title & Top Filter Tabs */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 border-b border-zinc-800 pb-3">
           <div className="flex items-center gap-4 md:gap-8 overflow-x-auto scrollbar-hide py-1">
-            {TOP_TABS.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => updateFilters({ type: tab.id })}
-                className={`text-sm md:text-lg font-bold border-b-2 transition-all whitespace-nowrap pb-1 px-1 ${
-                  typeParam === tab.id || (typeParam === "" && tab.id === "all")
-                    ? "border-green-500 text-green-500"
-                    : "border-transparent text-zinc-400 hover:text-white"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+            {TOP_TABS.map((tab) => {
+              const isActive =
+                tab.id === typeParam ||
+                (tab.id === "all" && (!typeParam || typeParam === "all")) ||
+                (tab.id === "dang_chieu" && (typeParam === "dang_chieu" || typeParam === "phim-dang-chieu")) ||
+                (tab.id === "chieu_rap" && (typeParam === "chieu_rap" || typeParam === "phim-chieu-rap")) ||
+                (tab.id === "tv_show" && (typeParam === "tv_show" || typeParam === "tv-shows" || typeParam === "tvshows"));
+
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => updateFilters({ type: tab.id })}
+                  className={`text-sm md:text-lg font-bold border-b-2 transition-all whitespace-nowrap pb-1 px-1 ${
+                    isActive
+                      ? "border-green-500 text-green-500"
+                      : "border-transparent text-zinc-400 hover:text-white"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
           </div>
 
           {/* Expand / Collapse & Active Filter indicator */}
