@@ -74,6 +74,11 @@ function WatchMovieContent({ params }: PageProps) {
   const [playerMode, setPlayerMode] = useState<"hls" | "iframe">("hls");
   const [streamError, setStreamError] = useState<{ isGeoBlocked?: boolean; message: string } | null>(null);
   const failedServersRef = useRef<Set<string>>(new Set());
+  // Remembers the stream URL that had to fall back to the server-side
+  // /api/stream proxy (because the browser could not fetch that m3u8
+  // directly). Compared against the current directM3u8Url, so any new or
+  // changed stream automatically retries direct playback first.
+  const [proxyRetryForUrl, setProxyRetryForUrl] = useState("");
 
   // Load saved preferences
   useEffect(() => {
@@ -312,8 +317,16 @@ function WatchMovieContent({ params }: PageProps) {
     }
   }
 
-  // Use Server-side Proxy stream to bypass client-side domain blocking
+  // Server-side proxy stream — BACKUP path (the upstream CDNs often geo-block
+  // foreign server IPs, so proxying from the host can fail).
   const proxiedStreamUrl = directM3u8Url ? `/api/stream?url=${encodeURIComponent(directM3u8Url)}` : "";
+
+  // PRIMARY path: the browser fetches the m3u8 straight from the video CDN.
+  // These CDNs allow CORS (*), so viewers on in-country networks play fine
+  // even when the site host itself is blocked. If direct fetch fails, we
+  // retry once through the server-side proxy (see proxyRetryForUrl).
+  const streamViaProxy = Boolean(directM3u8Url) && proxyRetryForUrl === directM3u8Url;
+  const activeStreamUrl = streamViaProxy ? proxiedStreamUrl : (directM3u8Url || proxiedStreamUrl);
 
   // User selected player mode or fallback
   const isIframe = playerMode === "iframe" || (!directM3u8Url && Boolean(
@@ -344,7 +357,7 @@ function WatchMovieContent({ params }: PageProps) {
       });
       hlsInstance = hls;
 
-      hls.loadSource(proxiedStreamUrl);
+      hls.loadSource(activeStreamUrl);
       hls.attachMedia(video);
 
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -360,6 +373,14 @@ function WatchMovieContent({ params }: PageProps) {
         if (data.fatal) {
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR: {
+              // Direct browser fetch failed — retry ONCE through the
+              // server-side proxy before declaring this server dead.
+              if (!streamViaProxy && proxiedStreamUrl && proxiedStreamUrl !== activeStreamUrl) {
+                triggerToast("⚠️ Không phát trực tiếp được, đang thử lại qua máy chủ proxy...");
+                setProxyRetryForUrl(directM3u8Url);
+                break;
+              }
+
               if (activeServerId) {
                 failedServersRef.current.add(activeServerId);
               }
@@ -404,7 +425,7 @@ function WatchMovieContent({ params }: PageProps) {
         }
       });
     } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      video.src = proxiedStreamUrl;
+      video.src = activeStreamUrl;
       if (isPlaying) {
         video.play().catch(() => {});
       }
@@ -416,7 +437,7 @@ function WatchMovieContent({ params }: PageProps) {
         hlsInstance.destroy();
       }
     };
-  }, [loading, movie, proxiedStreamUrl, isIframe, activeEpisodeIndex, activeServerId, isPlaying]);
+  }, [loading, movie, activeStreamUrl, proxiedStreamUrl, directM3u8Url, streamViaProxy, isIframe, activeEpisodeIndex, activeServerId, isPlaying]);
 
   if (loading || !movie) {
     return (

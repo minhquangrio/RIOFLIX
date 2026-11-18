@@ -385,26 +385,151 @@ async function tryFetchRawMovieData(targetSlug: string) {
   return null;
 }
 
+// ─── Slug/title matching helpers ───────────────────────────────────────────
+// Each source names movies differently (onflix: "mua-2-nguoi-x" while
+// phimapi: "nguoi-x-phan-2"), so we generate alternative slugs and search
+// keywords instead of trusting the raw stored slug.
+
+function normalizeText(input: string): string {
+  return input
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/[^a-z0-9\s-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function tokenize(slug: string): string[] {
+  return normalizeText(slug).replace(/-/g, " ").split(" ").filter(Boolean);
+}
+
+function uniqueKeepOrder(items: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const it of items) {
+    const key = it.toLowerCase();
+    if (!it || seen.has(key)) continue;
+    seen.add(key);
+    out.push(it);
+  }
+  return out;
+}
+
+const NOISE_TOKENS = ["vietsub", "thuyetminh", "full", "vs", "tm", "longtieng"];
+
+function isYearToken(w: string): boolean {
+  return /^(19|20)\d{2}$/.test(w);
+}
+
+// Alternative slugs across providers ("mua-2-X" -> "X-phan-2", ...)
+export function buildSlugCandidates(slug: string): string[] {
+  const candidates: string[] = [slug];
+
+  const cleaned = slug.replace(/-\d{4}$/, "").replace(/-(vietsub|thuyetminh|full)$/i, "");
+  if (cleaned !== slug) candidates.push(cleaned);
+
+  // "mua-2-nguoi-x" -> "nguoi-x-phan-2"
+  let m = cleaned.match(/^mua[-_]?(\d+)[-_](.+)$/);
+  if (m) candidates.push(`${m[2]}-phan-${m[1]}`);
+  // "<name>-mua-2" / "<name>-season-2" -> "<name>-phan-2" and "<name>-mua-2"
+  m = cleaned.match(/^(.*?)[-_](?:mua|season)[-_](\d+)$/);
+  if (m) {
+    candidates.push(`${m[1]}-phan-${m[2]}`);
+    candidates.push(`${m[1]}-mua-${m[2]}`);
+  }
+  // "<name>-phan-2" -> "<name>-mua-2"
+  m = cleaned.match(/^(.*?)[-_]phan[-_](\d+)$/);
+  if (m) candidates.push(`${m[1]}-mua-${m[2]}`);
+
+  // Each candidate also without trailing year
+  const expanded = candidates.flatMap(c => {
+    const noYear = c.replace(/-\d{4}$/, "");
+    return [c, noYear !== c ? noYear : ""].filter(Boolean);
+  });
+
+  return uniqueKeepOrder(expanded);
+}
+
+// Human-readable search keywords derived from the slug.
+export function buildSearchKeywords(slug: string): string[] {
+  const words = tokenize(slug);
+  const core = words.filter(w => !isYearToken(w) && !NOISE_TOKENS.includes(w));
+
+  // Drop leading "mua 2" / trailing "phan 2" season markers
+  const dropLeadSeason = [...core];
+  if (dropLeadSeason[0] === "mua" && /^\d+$/.test(dropLeadSeason[1] || "")) {
+    dropLeadSeason.splice(0, 2);
+  }
+  const dropTailSeason = [...core];
+  if (
+    /^(phan|mua|season)$/.test(dropTailSeason[dropTailSeason.length - 2] || "") &&
+    /^\d+$/.test(dropTailSeason[dropTailSeason.length - 1] || "")
+  ) {
+    dropTailSeason.splice(-2);
+  }
+
+  return uniqueKeepOrder([
+    dropLeadSeason.join(" "),
+    dropTailSeason.join(" "),
+    core.join(" "),
+    words.join(" "),
+  ]).filter(k => k.split(" ").length >= 2);
+}
+
+// Jaccard similarity between the stored slug and a provider slug.
+export function slugSimilarity(targetSlug: string, itemSlug: string): number {
+  const aTokens = tokenize(targetSlug).filter(w => !isYearToken(w) && !NOISE_TOKENS.includes(w));
+  const bTokens = tokenize(itemSlug).filter(w => !isYearToken(w) && !NOISE_TOKENS.includes(w));
+  if (aTokens.length === 0 || bTokens.length === 0) return 0;
+  const a = new Set(aTokens);
+  const b = new Set(bTokens);
+  let overlap = 0;
+  for (const w of a) if (b.has(w)) overlap++;
+  if (overlap === 0) return 0;
+  const union = new Set([...a, ...b]).size;
+  return overlap / union;
+}
+
 export async function fetchMovieDetailServer(slug: string): Promise<MovieDetail> {
   let fetched = await tryFetchRawMovieData(slug);
 
-  // Fallback 1: Try cleaned slug (stripping trailing year or suffix like -2026, -2025, -full)
+  // Fallback 1: try slug variants across providers + cleaned slug (year/suffix/season naming)
   if (!fetched) {
-    const cleaned = slug.replace(/-\d{4}$/, "").replace(/-(vietsub|thuyetminh|full)$/i, "");
-    if (cleaned !== slug) {
-      fetched = await tryFetchRawMovieData(cleaned);
+    for (const cand of buildSlugCandidates(slug)) {
+      if (cand === slug) continue;
+      fetched = await tryFetchRawMovieData(cand);
+      if (fetched) break;
     }
   }
 
-  // Fallback 2: Try searching API by keywords
+  // Fallback 2: search by readable keywords and pick the best-matching result
   if (!fetched) {
-    try {
-      const query = slug.replace(/-/g, " ");
-      const searchRes = await fetch(`https://phimapi.com/v1/api/tim-kiem?keyword=${encodeURIComponent(query)}&limit=1`).then(r => r.json());
-      if (searchRes?.status === "success" && searchRes.data?.items?.[0]?.slug) {
-        fetched = await tryFetchRawMovieData(searchRes.data.items[0].slug);
-      }
-    } catch (e) {}
+    for (const keyword of buildSearchKeywords(slug)) {
+      try {
+        const searchRes = (await safeFetchJson(
+          `https://phimapi.com/v1/api/tim-kiem?keyword=${encodeURIComponent(keyword)}&limit=8`
+        )) as { data?: { items?: { slug?: string }[] } } | null;
+        const items = searchRes?.data?.items ?? [];
+        const ranked = items
+          .map((it) => {
+            const itemSlug = String(it?.slug || "");
+            return { slug: itemSlug, score: slugSimilarity(slug, itemSlug) };
+          })
+          .filter(c => c.slug && c.score >= 0.35)
+          .sort((x, y) => y.score - x.score)
+          .slice(0, 3);
+        for (const cand of ranked) {
+          const found = await tryFetchRawMovieData(cand.slug);
+          if (found) {
+            fetched = found;
+            break;
+          }
+        }
+        if (fetched) break;
+      } catch {}
+    }
   }
 
   if (!fetched || !fetched.data || !fetched.data.movie) {
