@@ -443,6 +443,14 @@ export function buildSlugCandidates(slug: string): string[] {
   m = cleaned.match(/^(.*?)[-_]phan[-_](\d+)$/);
   if (m) candidates.push(`${m[1]}-mua-${m[2]}`);
 
+  // Title shortening: providers often cut the name at the colon subtitle,
+  // while onflix-style SEO slugs keep it
+  // ("bac-si-x-mafia-ao-trang" -> try "bac-si-x-mafia-ao", "bac-si-x-mafia", "bac-si-x").
+  const toks = cleaned.split("-").filter(Boolean);
+  for (let i = toks.length - 1; i >= Math.max(2, toks.length - 3); i--) {
+    candidates.push(toks.slice(0, i).join("-"));
+  }
+
   // Each candidate also without trailing year
   const expanded = candidates.flatMap(c => {
     const noYear = c.replace(/-\d{4}$/, "");
@@ -470,12 +478,38 @@ export function buildSearchKeywords(slug: string): string[] {
     dropTailSeason.splice(-2);
   }
 
-  return uniqueKeepOrder([
+  const kws = [
     dropLeadSeason.join(" "),
     dropTailSeason.join(" "),
     core.join(" "),
     words.join(" "),
-  ]).filter(k => k.split(" ").length >= 2);
+  ];
+  // Drop trailing words ("bac si x mafia ao trang" -> ... -> "bac si x") for
+  // providers that store only the shortened main title.
+  const baseTokens = dropLeadSeason.length >= 3 ? dropLeadSeason : core;
+  for (let k = baseTokens.length - 1; k >= Math.max(2, baseTokens.length - 3); k--) {
+    kws.push(baseTokens.slice(0, k).join(" "));
+  }
+
+  return uniqueKeepOrder(kws).filter(k => k.split(" ").length >= 2).slice(0, 8);
+}
+
+// Check whether a provider movie name still matches the target slug.
+// Accepts Jaccard similarity, or a "shortened title" (all name tokens are in
+// the target and drop no more than ~60% of the words) so that
+// "bac-si-x-mafia-ao-trang" can resolve to the provider's "Bác Sĩ X" while a
+// 2-word prefix colliding with a different movie ("Bác Sĩ ...") is rejected.
+function nameMatchesTarget(targetSlug: string, providerName: string): boolean {
+  const a = new Set(tokenize(targetSlug).filter(w => !isYearToken(w) && !NOISE_TOKENS.includes(w)));
+  const b = new Set(tokenize(providerName).filter(w => !isYearToken(w) && !NOISE_TOKENS.includes(w)));
+  if (a.size === 0 || b.size === 0) return false;
+  let overlap = 0;
+  for (const w of b) if (a.has(w)) overlap++;
+  if (overlap === 0) return false;
+  const jaccard = overlap / new Set([...a, ...b]).size;
+  const containment = overlap / b.size;
+  const lengthRatio = b.size / a.size;
+  return jaccard >= 0.3 || (containment >= 0.9 && lengthRatio >= 0.4);
 }
 
 // Jaccard similarity between the stored slug and a provider slug.
@@ -495,12 +529,18 @@ export function slugSimilarity(targetSlug: string, itemSlug: string): number {
 export async function fetchMovieDetailServer(slug: string): Promise<MovieDetail> {
   let fetched = await tryFetchRawMovieData(slug);
 
-  // Fallback 1: try slug variants across providers + cleaned slug (year/suffix/season naming)
+  // Fallback 1: try slug variants across providers (year/suffix/season naming
+  // and shortened prefixes for titles cut at the colon subtitle). A variant is
+  // only accepted when the provider's movie name still resembles the request.
   if (!fetched) {
     for (const cand of buildSlugCandidates(slug)) {
       if (cand === slug) continue;
-      fetched = await tryFetchRawMovieData(cand);
-      if (fetched) break;
+      const found = await tryFetchRawMovieData(cand);
+      if (!found) continue;
+      const movieName = String(found.data?.movie?.name || found.data?.movie?.origin_name || "");
+      if (!nameMatchesTarget(slug, movieName)) continue;
+      fetched = found;
+      break;
     }
   }
 
