@@ -256,11 +256,15 @@ async function tryFetchRawMovieData(targetSlug: string) {
 
     // 2. OPhim (Fallback / Alternative provider)
     if (ophimData?.status && ophimData?.movie) {
+      // Only merge OPhim's servers when its movie for this slug is actually
+      // the same film as the primary source (slug collisions across
+      // providers are common).
+      const ophimIsSameMovie = isSameProviderMovie(primaryData?.movie, ophimData.movie);
       if (!primaryData) {
         primaryData = ophimData;
         imgDomain = (ophimData.pathImage as string) || "https://img.ophim.live/uploads/movies/";
       }
-      const epArr = ophimData.episodes || [];
+      const epArr = ophimIsSameMovie ? (ophimData.episodes || []) : [];
       epArr.forEach((srv: any, idx: number) => {
         const srvNameLower = (srv.server_name || "").toLowerCase();
         const isTm = srvNameLower.includes("thuyết minh") || 
@@ -297,6 +301,10 @@ async function tryFetchRawMovieData(targetSlug: string) {
 
     if (validNguonc && validNguonc.movie) {
       const nm = validNguonc.movie;
+      // NguonC slugs collide with unrelated titles (its "bat-tien" is the
+      // Filipino film "Bất Tiện", not the animated "Bát Tiên!"), so only
+      // merge its servers when it is the same movie as the primary source.
+      const nguoncIsSameMovie = isSameProviderMovie(primaryData?.movie, nm);
       if (!primaryData) {
         primaryData = {
           status: true,
@@ -316,7 +324,7 @@ async function tryFetchRawMovieData(targetSlug: string) {
         };
         imgDomain = "";
       }
-      const epArr = nm.episodes || [];
+      const epArr = nguoncIsSameMovie ? (nm.episodes || []) : [];
       epArr.forEach((srv: any, idx: number) => {
         const srvNameLower = (srv.server_name || "").toLowerCase();
         const isTm = srvNameLower.includes("thuyết minh") || 
@@ -334,51 +342,26 @@ async function tryFetchRawMovieData(targetSlug: string) {
       });
     }
 
-    // Add extra SN & 4K servers matching available types
-    if (allEpisodesLists.length > 0) {
-      const vietsubEp = allEpisodesLists.find(s => !s.serverName.includes("Thuyết Minh"));
-      const thuyetminhEp = allEpisodesLists.find(s => s.serverName.includes("Thuyết Minh"));
-
-      if (vietsubEp) {
-        allEpisodesLists.unshift({
-          serverName: "Vietsub (SN)",
-          rawItems: vietsubEp.rawItems,
-          source: "subnhanh"
-        });
-      }
-
-      if (thuyetminhEp) {
-        allEpisodesLists.push({
-          serverName: "Thuyết Minh (SN)",
-          rawItems: thuyetminhEp.rawItems,
-          source: "subnhanh_tm"
-        });
-      }
-
-      const lastVietsub = [...allEpisodesLists].reverse().find(s => !s.serverName.includes("Thuyết Minh"));
-      if (lastVietsub) {
-        allEpisodesLists.push({
-          serverName: "Vietsub (4K)",
-          rawItems: lastVietsub.rawItems,
-          source: "4k"
-        });
-      }
-
-      const lastTM = [...allEpisodesLists].reverse().find(s => s.serverName.includes("Thuyết Minh"));
-      if (lastTM) {
-        allEpisodesLists.push({
-          serverName: "Thuyết Minh (4K)",
-          rawItems: lastTM.rawItems,
-          source: "4k_tm"
-        });
-      }
-    }
+    // Drop duplicate server lists. The old code fabricated "Vietsub (SN)" /
+    // "Vietsub (4K)" entries as literal copies of other providers' lists, so
+    // those buttons always replayed the exact same stream (and when the
+    // copied list came from a slug-collided provider, they always played the
+    // wrong movie). Only genuinely distinct sources are offered now.
+    const seenStreamSignatures = new Set<string>();
+    const uniqueEpisodesLists = allEpisodesLists.filter(group => {
+      const sig = (group.rawItems || [])
+        .map(it => String(it?.link_m3u8 || it?.m3u8 || it?.link_embed || it?.embed || ""))
+        .join("|");
+      if (!sig || seenStreamSignatures.has(sig)) return false;
+      seenStreamSignatures.add(sig);
+      return true;
+    });
 
     if (primaryData) {
       return {
         data: primaryData,
         imgDomain,
-        allEpisodesLists
+        allEpisodesLists: uniqueEpisodesLists
       };
     }
   } catch (e) {}
@@ -524,6 +507,92 @@ export function slugSimilarity(targetSlug: string, itemSlug: string): number {
   if (overlap === 0) return 0;
   const union = new Set([...a, ...b]).size;
   return overlap / union;
+}
+
+// ─── Provider movie identity ─────────────────────────────────────────────────
+// The same slug can point to DIFFERENT movies at different providers:
+// phimapi's "bat-tien" is "Bát Tiên!" (2026, animation) while NguonC's
+// "bat-tien" is "Bất Tiện" (2024, Filipino drama). normalizeText() strips
+// Vietnamese diacritics, so both read as "bat tien" — a provider-vs-provider
+// comparison must therefore KEEP diacritics first, and only fall back to
+// year / original (Latin) title when the unaccented forms collide.
+
+function titleTokenSet(input: string, stripDiacritics: boolean): Set<string> {
+  let s = (input || "")
+    .toLowerCase()
+    .normalize("NFC")
+    .replace(/[^\p{L}\p{N}\s]+/gu, " ");
+  if (stripDiacritics) {
+    s = s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d");
+  }
+  s = s.replace(/\s+/g, " ").trim();
+  return new Set(s.split(" ").filter(w => w && !NOISE_TOKENS.includes(w) && !isYearToken(w)));
+}
+
+function tokenOverlapCount(a: Set<string>, b: Set<string>): number {
+  let overlap = 0;
+  for (const w of b) if (a.has(w)) overlap++;
+  return overlap;
+}
+
+// A raw provider movie object; shapes differ per provider, so only the
+// identity-relevant fields are typed (they arrive as arbitrary JSON).
+type ProviderMovie = Record<string, unknown> | null | undefined;
+
+// Providers expose the title/year under slightly different field names.
+function providerMovieName(m: ProviderMovie): string {
+  return String(m?.name || m?.film_name || m?.title || "");
+}
+function providerMovieOriginName(m: ProviderMovie): string {
+  return String(m?.origin_name || m?.original_name || "");
+}
+function providerMovieYear(m: ProviderMovie): number | null {
+  const match = String(m?.year || "").match(/(?:19|20)\d{2}/);
+  return match ? parseInt(match[0], 10) : null;
+}
+
+// Years: compatible when either side is unknown or they're within 1 year.
+function providerYearsCompatible(a: ProviderMovie, b: ProviderMovie): boolean {
+  const ya = providerMovieYear(a);
+  const yb = providerMovieYear(b);
+  if (!ya || !yb) return true;
+  return Math.abs(ya - yb) <= 1;
+}
+
+// Original titles: compatible when either side is unknown or they share a token.
+function providerOriginsCompatible(a: ProviderMovie, b: ProviderMovie): boolean {
+  const oa = titleTokenSet(providerMovieOriginName(a), true);
+  const ob = titleTokenSet(providerMovieOriginName(b), true);
+  if (oa.size === 0 || ob.size === 0) return true;
+  return tokenOverlapCount(oa, ob) > 0;
+}
+
+// True when two raw provider movie objects refer to the same film.
+export function isSameProviderMovie(primary: ProviderMovie, candidate: ProviderMovie): boolean {
+  if (!primary || !candidate) return true;
+
+  const pName = titleTokenSet(providerMovieName(primary), false);
+  const cName = titleTokenSet(providerMovieName(candidate), false);
+  if (pName.size > 0 && cName.size > 0) {
+    const overlap = tokenOverlapCount(pName, cName);
+    const union = new Set([...pName, ...cName]).size;
+    if (overlap > 0 && overlap / union >= 0.6) return true; // clearly the same title
+    if (overlap === 0) {
+      // Titles share nothing with diacritics on. They may still be the same
+      // movie stored with/without marks ("Bát Tiên" vs "Bat Tien") — or two
+      // different movies that slug-collide ("Bát Tiên" vs "Bất Tiện").
+      // Decide only with independent evidence: year + original title.
+      const pPlain = titleTokenSet(providerMovieName(primary), true);
+      const cPlain = titleTokenSet(providerMovieName(candidate), true);
+      if (tokenOverlapCount(pPlain, cPlain) === 0) return false;
+      return providerYearsCompatible(primary, candidate) &&
+        providerOriginsCompatible(primary, candidate);
+    }
+    // Partial title overlap (e.g. season-wording variants): confirm below.
+  }
+
+  return providerYearsCompatible(primary, candidate) &&
+    providerOriginsCompatible(primary, candidate);
 }
 
 export async function fetchMovieDetailServer(slug: string): Promise<MovieDetail> {
